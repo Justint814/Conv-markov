@@ -135,7 +135,7 @@ trans_matrix = mark_obj.trans_matrix() #Retrieve transition matrix
 
 print(np.sum(trans_matrix)) #Ensure the sum of the transition matrix is 1
 
-#fun
+#sync test
 
 
 
