@@ -11,7 +11,7 @@ if __name__ == "__main__":
     from_date = today - datetime.timedelta(days=30)
 '''
 class PolygonData:
-
+    
     #Dictionary to store type of data retrieved from json response of the polygon API request.
     polydat = {"close": "c", "open": "p", "low": "l", "high": "h", "time": "t", "volume": "v", "vwap": "vw"}
 

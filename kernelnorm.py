@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import keras
+import plotly.graph_objects  as go
 
 #Shape formate (outer, middle, inner)
 #conv1D input shape (batch size, steps, channels) channels should be 1 for timeseries data. steps should be the amount of data in one time series. In this case, it should be the size of the kernel. Batch size should be the number of batches.
@@ -19,8 +20,11 @@ class conv_train:
         min = np.min(data)
         
         range = max - min
-        
-        return (data - min) / range
+
+        if range > 0:
+            return (data - min) / range
+        else:
+            return np.zeros(len(data))
 
     #Function to take time series data and convert it into a format for Keras Convlayer1D. (batches, steps, channels)
     def kernel_batch(self): #Inputs: D numpy array of values, kernel size
@@ -29,7 +33,9 @@ class conv_train:
 
         for i in range(0, length - self.k_size, self.stride):
             stop = i + self.k_size
-            batch = conv_train.min_max(self.series[i:stop])
+            target = self.series[i:stop]
+
+            batch = conv_train.min_max(target)
             batches.append(batch)
         
         batches = np.expand_dims(np.array(batches), axis=-1)
@@ -60,6 +66,7 @@ class conv_train:
         #Get weight array of highest activation filters. Indices correspond to innermost dimension of weight array returned by conv.markov.weights()
         self.target_weights = self.weight_arr[:,:,self.filter_indices]
 
+        self.num_filters = np.shape(self.target_weights)[2]
         return self.target_weights
 
     #Return weight array after obtaiing feature map
@@ -110,30 +117,56 @@ class conv_train:
     
     #Construct transition matrix
     def trans_matrix(self):
-        self.transition_matrix = self.adj_matrix() / self.num_filters
+        self.adj_matrix()
+        sums_arr = np.sum(self.a_matrix, axis=1)[:, np.newaxis]
+
+        self.transition_matrix = np.divide(self.a_matrix, sums_arr, out=np.zeros_like(self.a_matrix), where=sums_arr!=0)
 
         return self.transition_matrix
+    
+    def filter_plot(self):
+            xdim = np.shape(self.weight_arr)[0]  # k_size
+            ydim = np.shape(self.weight_arr)[2]  # num filters
+            rep_counts = np.full(xdim, ydim)
+
+            xdata = np.repeat(np.arange(1,self.k_size + 1, 1), rep_counts)
+            ydata = np.tile(np.arange(1, self.num_filters + 1), self.k_size)
+            zdata = self.weight_arr.flatten()
+
+            #Configure plot.
+            self.filter_fig = go.Figure()
+            self.filter_fig.update_layout(
+            scene=dict(
+                xaxis=dict(title="Weight"), 
+                yaxis=dict(title="Filter"),
+                zaxis=dict(title="Magnitude")
+            )
+        )
+            self.filter_fig.add_trace(go.Scatter3d(x=xdata, y=ydata, z=zdata, mode="markers", marker=dict(color='black', symbol="square")))
+
+            self.filter_fig.show()
             
 
 
 
 #Example Code:
-time_series = np.random.rand(2000) #Define random time series
+if __name__ == "__main__":
+    time_series = np.random.rand(2000) #Define random time series
 
-conv_obj = conv_train(time_series, 6) #Define conv_markov object for processing with time series and kernel size of 6
+    conv_obj = conv_train(time_series, 6) #Define conv_markov object for processing with time series and kernel size of 6
 
-conv_obj.set_conv(15) #Define convolutional layer with 5 fiters
+    conv_obj.set_conv(15) #Define convolutional layer with 15 fiters
 
-feature_map = conv_obj.features() #Get feature map
-weights = conv_obj.top_filters(top_k=5)
+    feature_map = conv_obj.features() #Get feature map
+    weights = conv_obj.top_filters(top_k=5)
 
-#Set user input weights to filters
-mark_obj = conv_train(time_series, 6) #Establish data object
-mark_obj.my_weights(weights) #Input weights previously obtained from top_filters()
-mark_obj.features() #Get output 
-trans_matrix = mark_obj.trans_matrix() #Retrieve transition matrix
+    #Set user input weights to filters
+    mark_obj = conv_train(time_series, 6) #Establish data object
+    mark_obj.my_weights(weights) #Input weights previously obtained from top_filters()
+    mark_obj.features() #Get output 
+    trans_matrix = mark_obj.trans_matrix() #Retrieve transition matrix
 
-print(np.sum(trans_matrix)) #Ensure the sum of the transition matrix is 1
+    print(np.sum(trans_matrix)) #Ensure the sum of the transition matrix is 1
 
 
 
