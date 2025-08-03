@@ -110,7 +110,7 @@ class conv_train:
     
     #Construct transition matrix
     def trans_matrix(self):
-        self.transition_matrix = self.adj_matrix() / self.list_len
+        self.transition_matrix = self.adj_matrix() / self.num_filters
 
         return self.transition_matrix
             
