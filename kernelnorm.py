@@ -118,13 +118,13 @@ class conv_train:
     #Construct transition matrix
     def trans_matrix(self):
         self.adj_matrix()
-        sums_arr = np.sum(self.a_matrix, axis=1)[:, np.newaxis]
+        sums_arr = np.sum(self.a_matrix, axis=1)[:,np.newaxis]
 
         self.transition_matrix = np.divide(self.a_matrix, sums_arr, out=np.zeros_like(self.a_matrix), where=sums_arr!=0)
 
         return self.transition_matrix
     
-    def filter_plot(self):
+    def filter_plot3d(self):
             xdim = np.shape(self.weight_arr)[0]  # k_size
             ydim = np.shape(self.weight_arr)[2]  # num filters
             rep_counts = np.full(xdim, ydim)
@@ -145,6 +145,18 @@ class conv_train:
             self.filter_fig.add_trace(go.Scatter3d(x=xdata, y=ydata, z=zdata, mode="markers", marker=dict(color='black', symbol="square")))
 
             self.filter_fig.show()
+
+    def filter_plot2d(self):
+        xdata = np.arange(1, self.k_size + 1, 1)
+
+        for filter in range(self.num_filters):
+            ydata = self.weight_arr[:,:,filter].flatten()
+            
+            fig = go.Figure(data=[go.Scatter(x=xdata, y=ydata, mode='markers', marker=dict(color='black', size=40, symbol='square'))])
+            fig.update_layout(title=f"Filter {filter} weights",
+                              xaxis_title="Weight Number",
+                              yaxis_title="Weight Value")
+            fig.show()
             
 
 
@@ -170,7 +182,17 @@ if __name__ == "__main__":
 
 
 
+#Write function to visualize markov chain with states 
+# colored by their dominant pattern: 
+# (green: end point higher than average and start, 
+# red end point lower than average and start, 
+# grey: end point within 1 stdev of average and close to start). 
+# Or do gradient from red to green based on 
+# how much higher than average the kernel ends at.
 
+#Write function to sample live stock data
+
+#Write function to continuously return the current state that stock is in 
 
 
 

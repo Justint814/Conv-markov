@@ -21,7 +21,7 @@ test_obj.features()
 trans_matrix = test_obj.trans_matrix()
 
 print(trans_matrix)
-test_obj.filter_plot()
+test_obj.filter_plot2d()
 
 
 
