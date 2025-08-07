@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import keras
 import plotly.graph_objects  as go
-
+from markovchain import MarkovChain
 #Shape formate (outer, middle, inner)
 #conv1D input shape (batch size, steps, channels) channels should be 1 for timeseries data. steps should be the amount of data in one time series. In this case, it should be the size of the kernel. Batch size should be the number of batches.
 
@@ -42,9 +42,18 @@ class conv_train:
 
         return batches
 
-    def set_conv(self, filters):
+    def set_conv(self, filters, weight=True):
         self.conv_layer = keras.layers.Conv1D(filters, self.k_size, activation='relu')
-        
+        if weight==True:
+            self.make_weights(self.k_size, filters)
+
+            #Call conv layer to initalize weights
+            self.conv_layer(self.input)
+
+            #Apply target weights to filters
+            self.conv_layer.set_weights([self.weight_arr, self.bias_arr])
+            self.conv_layer.trainable = False
+
     #Function to set output and return feature map
     def features(self):
         self.output = self.conv_layer(self.input) #(batches, steps, filter activations)
@@ -58,18 +67,31 @@ class conv_train:
     
     #Function to sort output data by feature activation
     def top_filters(self, top_k=2):
-        avg_activation = np.mean(np.abs(self.output), axis=(0, 1))
+        '''
+        avg_activation = np.mean(self.output, axis=(0, 1))
 
         #Get indices of filters with highest average activation
         self.filter_indices = np.argsort(avg_activation)[-top_k:]
 
         #Get weight array of highest activation filters. Indices correspond to innermost dimension of weight array returned by conv.markov.weights()
         self.target_weights = self.weight_arr[:,:,self.filter_indices]
+        '''
+        top_f = []
+        for i in range(self.num_batches):
+            top_f.append(np.argmax(self.output[i,0,:]))
+
+        top_f = np.array(top_f)
+        indices, counts = np.unique(top_f, return_counts=True)
+        weight_ind = np.row_stack((indices, counts))
+        sort_ind = np.argsort(weight_ind[1,:])
+        self.filter_indices = weight_ind[0,sort_ind][-top_k:]
+        self.target_weights = self.weight_arr[:,:,self.filter_indices]
+
 
         self.num_filters = np.shape(self.target_weights)[2]
         return self.target_weights
 
-    #Return weight array after obtaiing feature map
+    #Return weight array after obtaining feature map
     def weights(self):
         return self.weight_arr
     
@@ -88,12 +110,20 @@ class conv_train:
         self.conv_layer.set_weights([self.weight_arr, self.bias_arr])
         self.conv_layer.trainable = False
 
+    def make_weights(self, kernel_size, num_filters):
+        self.weight_arr = np.random.rand(kernel_size, 1, num_filters)
+        self.bias_arr = np.zeros(num_filters)
+        
+
     #Iterate through feature map and store filter indicies of max activation for each time step
     def max_act(self):
         self.num_batches = self.out_shape[0]
         activation_list = [] #List of indices of dominant filter activation for each batch (timestep in this case)
         for i in range(self.num_batches):
-            activation_list.append(np.argmax(self.output[i,:,:]))
+            if np.max(self.output[i,:,:]) > 0.2 * self.k_size:
+                activation_list.append(np.argmax(self.output[i,:,:]))
+            else: 
+                activation_list.append(self.num_filters)
 
         self.activation_list = np.array(activation_list)
 
@@ -104,7 +134,7 @@ class conv_train:
     def adj_matrix(self):
         self.max_act() #Store activation list as object variable by calling max_act()
 
-        a_matrix = np.zeros((self.num_filters, self.num_filters))
+        a_matrix = np.zeros((self.num_filters + 1, self.num_filters + 1))
         self.list_len = len(self.activation_list)
         #Fill adjacency matrix with the row specifying the filter that appears first
         for i in range(self.list_len):
@@ -153,11 +183,22 @@ class conv_train:
             ydata = self.weight_arr[:,:,filter].flatten()
             
             fig = go.Figure(data=[go.Scatter(x=xdata, y=ydata, mode='markers', marker=dict(color='black', size=40, symbol='square'))])
-            fig.update_layout(title=f"Filter {filter} weights",
+            fig.update_layout(title=f"Filter {filter + 1} weights",
                               xaxis_title="Weight Number",
                               yaxis_title="Weight Value")
             fig.show()
-            
+
+    def markov_chain(self):
+        states = [f"Filter {i+1}" for i in range(self.num_filters + 1)]
+
+        #Check if the transition matrix exists as an object attribute
+        if hasattr(self, 'transition_matrix') == False:
+            self.transition_matrix = self.trans_matrix()
+
+        #Define and draw markov chain
+        mc = MarkovChain(self.transition_matrix, states, self.weight_arr)
+        mc.draw()
+        
 
 
 
@@ -183,6 +224,9 @@ if __name__ == "__main__":
 
 
 #Write function to visualize markov chain with states 
+
+#Edit node class to take a float between 0 and 1 as an argument and set node color based on it
+
 # colored by their dominant pattern: 
 # (green: end point higher than average and start, 
 # red end point lower than average and start, 

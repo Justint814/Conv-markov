@@ -1,10 +1,10 @@
 import numpy as np
+from datetime import datetime, timedelta
+import time
+import pytz
 
-matrix = np.random.rand(2,2)
-print(matrix)
 
-row_sums = np.sum(matrix, axis=1)
-sums_arr = row_sums[:, np.newaxis]
-div_matrix = matrix / sums_arr
+arr_1d = np.array([1, 2, 2, 3, 1, 4, 3, 3, 5])
 
-print(div_matrix)
+arr_1d[0:5] = 6
+print(arr_1d)
