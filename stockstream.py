@@ -31,8 +31,13 @@ class PolygonData:
         data = response.json()
         target_param = self.polydat[data_type]
 
-        self.output = np.array([item[target_param] for item in data.get('results', [])])
+        self.high = np.array([item["h"] for item in data.get('results', [])])
+        self.low = np.array([item["l"] for item in data.get('results', [])])
+        self.open = np.array([item for item in data.get('results', [])])
+        self.close = np.array([item["c"] for item in data.get('results', [])])
         self.volume = np.array([item["v"] for item in data.get('results', [])])
+        self.output = np.array([item[target_param] for item in data.get('results', [])])
+
         return self.output
     
     def ema(self, input, period):
@@ -59,4 +64,22 @@ class PolygonData:
             self.vwap_arr[i] = np.sum(self.volume[i - period:i] * input[i - period:i]) / np.sum(self.volume[i - period:i])
 
         return self.vwap_arr
+    
+    def vwap_boot(self, input, period, sample_size=2000):
+        self.vwap_boot_arr = np.zeros_like(input)
+
+       #Initialize starting values in first period
+        self.vwap_boot_arr[0:period] = np.sum(self.volume[0:period] * input[0:period]) / np.sum(self.volume[0:period])
+
+        for i in np.arange(period, len(input), 1):
+            volume_init = self.volume[i - period:i]
+            price_init = input[i - period:i]
+
+            #Apply bootstrapping to data range
+            volume_resample = np.random.choice(volume_init, size=sample_size, replace=True)
+            price_resample = np.random.choice(price_init, size=sample_size, replace=True)
+
+            self.vwap_boot_arr[i] = np.sum(volume_resample * price_resample) / np.sum(volume_resample)
+
+        return self.vwap_boot_arr
 

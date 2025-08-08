@@ -6,6 +6,7 @@ from markovchain import MarkovChain
 #Shape formate (outer, middle, inner)
 #conv1D input shape (batch size, steps, channels) channels should be 1 for timeseries data. steps should be the amount of data in one time series. In this case, it should be the size of the kernel. Batch size should be the number of batches.
 
+
 #Class used for collecting top filters 
 class conv_train:
     def __init__(self, series, k_size, stride=1):
@@ -13,6 +14,7 @@ class conv_train:
         self.k_size = k_size
         self.stride = stride
         self.input = self.kernel_batch()
+
     
     #Helper function to apply min-max scaling to a numpy array
     def min_max(data):
