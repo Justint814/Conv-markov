@@ -6,3 +6,6 @@ import pytz
 
 
 
+print(E_sum(x))
+
+
