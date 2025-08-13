@@ -92,8 +92,9 @@ class PolygonData:
             price_init = input[i - period:i]
 
             #Apply bootstrapping to data range
-            volume_resample = np.random.choice(volume_init, size=sample_size, replace=True)
-            price_resample = np.random.choice(price_init, size=sample_size, replace=True)
+            indices = np.random.choice(range(len(volume_init)), size=sample_size, replace=True)
+            volume_resample = volume_init[indices]
+            price_resample = price_init[indices]
 
             self.vwap_boot_arr[i] = np.sum(volume_resample * price_resample) / np.sum(volume_resample)
 
