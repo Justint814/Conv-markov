@@ -20,7 +20,7 @@ class PolygonData:
     #Dictionary to store type of data retrieved from json response of the polygon API request.
     polydat = {"close": "c", "open": "p", "low": "l", "high": "h", "time": "t", "volume": "v", "vwap": "vw"}
 
-    def __init__(self, API_key: str, days=600):
+    def __init__(self, API_key: str, days=40):
         self.api_key = API_key
         self.today = datetime.date.today()
         self.from_date = self.today - datetime.timedelta(days=days)
@@ -67,15 +67,31 @@ class PolygonData:
     
     def boot_sma(self, input, period, sample_size=200):
         sma = np.zeros_like(input)
+        std_dev = np.zeros_like(input)
 
         #Initialize starting values in first period
         sma[0:period] = np.sum(input[0:period]) / len(input[0:period])
 
         for i in np.arange(period, len(input), 1):
-            price_resample = np.random.choice(input, size=sample_size, replace=True)
-            sma[i] = np.sum(price_resample) / len(price_resample)
+            sma[i] = np.sum(input[i-period:i]) / period
+            std_dev[i] = sma[i] + np.std(input[i-period:i])
 
         return sma
+    
+    def std_dev(self, input, period):
+        p_2sig = np.zeros_like(input)
+        p_2sig[0:period] = np.sum(input[0:period]) / len(input[0:period])
+
+        m_2sig = np.zeros_like(input)
+        m_2sig[0:period] = np.sum(input[0:period]) / len(input[0:period]) 
+
+        for i in np.arange(period, len(input), 1):
+            avg = np.sum(input[i-period:i]) / period
+            p_2sig[i] = avg + 2 * np.std(input[i-period:i])
+            m_2sig[i] = avg - 2 * np.std(input[i-period:i])
+
+        return p_2sig, m_2sig
+    
     
     def vwap_boot(self, input, period, sample_size=2000, stddev=False):
         self.vwap_boot_arr = np.zeros_like(input)
